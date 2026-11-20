@@ -202,7 +202,7 @@ const Dashboard = () => {
         {/* Department Distribution (Bar Chart) */}
         <Card
           title="Students by Department"
-          subtitle="Real-time enrollment distribution across departments"
+          subtitle="Real-time enrollment distribution across academic departments"
           action={
             <Button
               variant="ghost"
@@ -214,34 +214,71 @@ const Dashboard = () => {
             </Button>
           }
         >
-          <div className="h-64 w-full pt-2">
-            {distribution.byDepartment.length === 0 ? (
+          <div className="h-72 w-full pt-1">
+            {(!distribution.byDepartment || distribution.byDepartment.length === 0) ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs">
                 No department enrollment data recorded
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={distribution.byDepartment} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                <BarChart
+                  data={(distribution.byDepartment || []).map((d) => {
+                    let shortLabel = d.code ? d.code.replace('DEP-', '') : d.name;
+                    if (d.name?.includes('Computer Applications')) shortLabel = 'Comp. Apps';
+                    else if (d.name?.includes('Computer Science')) shortLabel = 'CS & Eng.';
+                    else if (d.name?.includes('Information Technology')) shortLabel = 'Info. Tech';
+                    else if (d.name?.includes('Management')) shortLabel = 'Management';
+
+                    return {
+                      name: d.name,
+                      code: d.code,
+                      shortLabel,
+                      students: d.students ?? d.count ?? 0,
+                      activeStudents: d.activeStudents ?? 0,
+                    };
+                  })}
+                  margin={{ top: 15, right: 15, left: -15, bottom: 15 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                   <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: '#64748B' }}
-                    interval={0}
-                    angle={-20}
-                    textAnchor="end"
+                    dataKey="shortLabel"
+                    tick={{ fontSize: 11, fill: '#475569', fontWeight: 500 }}
+                    tickLine={false}
+                    axisLine={{ stroke: '#E2E8F0' }}
                   />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: '#64748B' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                      fontSize: '12px',
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const item = payload[0].payload;
+                        return (
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-md text-xs">
+                            <p className="font-semibold text-slate-900">{item.name}</p>
+                            <p className="text-slate-500 mt-1">
+                              Code: <span className="font-mono text-slate-700">{item.code}</span>
+                            </p>
+                            <p className="text-slate-600 mt-0.5">
+                              Total Students: <strong className="text-[#7A1528]">{item.students}</strong>
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                     cursor={{ fill: '#F8FAFC' }}
                   />
-                  <Bar dataKey="count" name="Students" fill="#7A1528" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                  <Bar
+                    dataKey="students"
+                    name="Students"
+                    fill="#7A1528"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={48}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -263,23 +300,37 @@ const Dashboard = () => {
             </Button>
           }
         >
-          <div className="h-64 w-full flex items-center justify-center">
-            {distribution.byCourse.length === 0 ? (
+          <div className="h-72 w-full flex items-center justify-center">
+            {(!distribution.byCourse || distribution.byCourse.length === 0) ? (
               <div className="text-slate-400 text-xs">No course enrollment data recorded</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={distribution.byCourse}
+                    data={(distribution.byCourse || []).map((c) => {
+                      let shortName = c.code || c.name;
+                      if (c.name?.includes('Bachelor of Computer Applications')) shortName = 'BCA';
+                      else if (c.name?.includes('Master of Computer Applications')) shortName = 'MCA';
+                      else if (c.name?.includes('Information Technology')) shortName = 'B.Sc IT';
+                      else if (c.name?.includes('Computer Science')) shortName = 'B.Tech CSE';
+                      else if (c.name?.includes('Business Administration')) shortName = 'BBA';
+
+                      return {
+                        name: shortName,
+                        fullName: c.name,
+                        code: c.code,
+                        students: c.students ?? c.count ?? 0,
+                      };
+                    })}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
+                    cy="45%"
+                    innerRadius={50}
+                    outerRadius={75}
                     paddingAngle={3}
-                    dataKey="count"
+                    dataKey="students"
                     nameKey="name"
                   >
-                    {distribution.byCourse.map((entry, index) => (
+                    {(distribution.byCourse || []).map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={CHART_COLORS[index % CHART_COLORS.length]}
@@ -287,12 +338,22 @@ const Dashboard = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                      fontSize: '12px',
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const item = payload[0].payload;
+                        return (
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-md text-xs">
+                            <p className="font-semibold text-slate-900">{item.fullName}</p>
+                            <p className="text-slate-500 mt-1">
+                              Code: <span className="font-mono text-slate-700">{item.code}</span>
+                            </p>
+                            <p className="text-[#7A1528] font-bold mt-0.5">
+                              {item.students} {item.students === 1 ? 'Student' : 'Students'}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                   <Legend
